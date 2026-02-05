@@ -1,0 +1,23 @@
+{
+  "name": "smm-bot",
+  "version": "1.0.0",
+  "description": "Automated SMM bot for Telegram content generation and publishing",
+  "main": "bot.js",
+  "type": "module",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node --watch bot.js",
+    "setup": "node setup.js"
+  },
+  "dependencies": {
+    "gramjs": "^2.20.0",
+    "dotenv": "^16.4.5",
+    "@anthropic-ai/sdk": "^0.24.3",
+    "node-cron": "^3.0.3",
+    "axios": "^1.7.2"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
