@@ -28,15 +28,18 @@
 В разделе "Environment Variables" добавь:
 
 ```
-TELEGRAM_BOT_TOKEN=8594810468:AAFBGvkb0N5NKL5z7r1LT76PZqe7g8g5nAc
-TELEGRAM_API_ID=33407296
-TELEGRAM_API_HASH=61c87de0b4018e6095fd5f53c7fc564b
-TELEGRAM_PHONE=+380501234567
-CLAUDE_API_KEY=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
-SMM_MEDIA_API_KEY=phz6vfCCFo9WehwJ4P9OcUIBXaDHMePg1VzNhgY22UZYUYfjEgL7tzZPIFOhgADF3L9VxKp4f9qNz8t7TA2k1Nes2j
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+TELEGRAM_API_ID=your_api_id
+TELEGRAM_API_HASH=your_api_hash
+TELEGRAM_PHONE=your_phone_number
+CLAUDE_API_KEY=your_claude_key_here
+SMM_MEDIA_API_KEY=your_smm_media_key
 PUBLISH_TIME=23:15
 NODE_ENV=production
 ```
+
+**⚠️ ВАЖНО:** Не коммитай реальные ключи в репо!
+Они должны быть только в переменных окружения Render, не в коде.
 
 ### 3️⃣ Деплой
 
