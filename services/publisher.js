@@ -1,32 +1,25 @@
-import { TelegramClient } from 'gramjs';
-import { StringSession } from 'gramjs/sessions';
+import axios from 'axios';
 import { config } from '../config/config.js';
 import { logger } from '../utils/logger.js';
 
-let client = null;
+const TELEGRAM_API = `https://api.telegram.org/bot${config.botToken}`;
 
 /**
- * Инициализирует Telegram Client для публикации
- * @returns {Promise<TelegramClient>}
+ * Инициализирует publisher (проверяет токен)
+ * @returns {Promise<boolean>}
  */
 export async function initPublisher() {
   try {
-    if (client?.connected) {
-      logger.info('Publisher already connected');
-      return client;
-    }
-
     logger.info('Initializing Telegram Publisher...');
 
-    const stringSession = new StringSession('');
-    client = new TelegramClient(stringSession, config.apiId, config.apiHash, {
-      connectionRetries: 5,
-    });
+    const response = await axios.get(`${TELEGRAM_API}/getMe`);
 
-    await client.connect();
-    logger.info('✓ Publisher initialized');
-
-    return client;
+    if (response.data.ok) {
+      logger.info(`✓ Publisher initialized (Bot: @${response.data.result.username})`);
+      return true;
+    } else {
+      throw new Error('Invalid bot token');
+    }
   } catch (error) {
     logger.error(`Failed to initialize publisher: ${error.message}`);
     throw error;
@@ -41,20 +34,21 @@ export async function initPublisher() {
  */
 export async function publishMessage(channelUsername, message) {
   try {
-    if (!client || !client.connected) {
-      await initPublisher();
-    }
-
     logger.info(`Publishing to ${channelUsername}...`);
 
-    const entity = await client.getEntity(channelUsername);
-    const result = await client.sendMessage(entity, {
-      message: message,
-      parseMode: 'html',
+    const response = await axios.post(`${TELEGRAM_API}/sendMessage`, {
+      chat_id: channelUsername,
+      text: message,
+      parse_mode: 'HTML',
     });
 
-    logger.info(`✓ Message published to ${channelUsername} (ID: ${result.id})`);
-    return { success: true, messageId: result.id, channel: channelUsername };
+    if (response.data.ok) {
+      const messageId = response.data.result.message_id;
+      logger.info(`✓ Message published to ${channelUsername} (ID: ${messageId})`);
+      return { success: true, messageId, channel: channelUsername };
+    } else {
+      throw new Error(response.data.description || 'Unknown error');
+    }
   } catch (error) {
     logger.error(`Failed to publish to ${channelUsername}: ${error.message}`);
     throw error;
@@ -83,18 +77,11 @@ export async function publishToMultiple(channels, message) {
 }
 
 /**
- * Отключает Telegram Client
+ * Отключает publisher (заглушка для совместимости)
  * @returns {Promise<void>}
  */
 export async function disconnectPublisher() {
-  try {
-    if (client && client.connected) {
-      await client.disconnect();
-      logger.info('✓ Publisher disconnected');
-    }
-  } catch (error) {
-    logger.error(`Failed to disconnect publisher: ${error.message}`);
-  }
+  logger.info('✓ Publisher disconnected');
 }
 
 export default {

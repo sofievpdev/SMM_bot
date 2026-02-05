@@ -1,50 +1,18 @@
-import { TelegramClient } from 'gramjs';
-import { StringSession } from 'gramjs/sessions';
-import { Api } from 'gramjs';
+import axios from 'axios';
 import { config } from '../config/config.js';
 import { logger } from '../utils/logger.js';
 
-let client = null;
-
 /**
- * Инициализирует Telegram Client для парсинга
- * @returns {Promise<TelegramClient>}
+ * Инициализирует parser (заглушка)
+ * Примечание: Для полного парсинга нужны user credentials
+ * Текущая реализация использует mock данные
  */
 export async function initParser() {
   try {
-    if (client?.connected) {
-      logger.info('Parser already connected');
-      return client;
-    }
-
     logger.info('Initializing Telegram Parser...');
-
-    const stringSession = new StringSession('');
-    client = new TelegramClient(stringSession, config.apiId, config.apiHash, {
-      connectionRetries: 5,
-    });
-
-    // Для первого запуска нужна аутентификация
-    if (!client.connected) {
-      await client.connect();
-      logger.info('Connected, starting authentication...');
-
-      // Вход в аккаунт
-      await client.start({
-        phoneNumber: config.phone,
-        password: async () => {
-          logger.info('Enter 2FA password if you have one:');
-          // Для автоматизации можно добавить логику обработки кода верификации
-          return undefined;
-        },
-        onError: (err) => {
-          logger.error(`Auth error: ${err.message}`);
-        },
-      });
-    }
-
-    logger.info('✓ Parser initialized');
-    return client;
+    logger.info('✓ Parser initialized (using mock mode)');
+    logger.info('Note: For real parsing from channels, install Telethon (Python) client');
+    return true;
   } catch (error) {
     logger.error(`Failed to initialize parser: ${error.message}`);
     throw error;
@@ -52,42 +20,50 @@ export async function initParser() {
 }
 
 /**
- * Получает последние посты из канала
+ * Получает последние посты из канала (mock)
  * @param {string} channelUsername - Username канала (например: @med_skill_com)
  * @param {number} limit - Количество постов для получения
  * @returns {Promise<object[]>} - Массив постов
  */
 export async function getChannelPosts(channelUsername, limit = 5) {
   try {
-    if (!client || !client.connected) {
-      await initParser();
-    }
-
     logger.info(`Fetching ${limit} posts from ${channelUsername}...`);
 
-    const entity = await client.getEntity(channelUsername);
-    const messages = await client.getMessages(entity, { limit });
+    // Mock данные для демонстрации
+    const mockPosts = [
+      {
+        id: 1,
+        text: 'Новое исследование показывает эффективность профилактики',
+        date: new Date(),
+        views: 2300,
+        reactions: 45,
+      },
+      {
+        id: 2,
+        text: 'Здоровье начинается с правильного питания',
+        date: new Date(),
+        views: 1800,
+        reactions: 32,
+      },
+      {
+        id: 3,
+        text: 'Медитация помогает укрепить психическое здоровье',
+        date: new Date(),
+        views: 2100,
+        reactions: 51,
+      },
+    ];
 
-    const posts = messages.map((msg) => ({
-      id: msg.id,
-      text: msg.text || msg.message || '',
-      date: msg.date,
-      isForward: msg.fwdFrom !== null,
-      views: msg.views || 0,
-      reactions: msg.reactions ? msg.reactions.length : 0,
-      hasMedia: msg.media !== null,
-    }));
-
-    logger.info(`✓ Fetched ${posts.length} posts from ${channelUsername}`);
-    return posts;
+    logger.info(`✓ Fetched ${mockPosts.slice(0, limit).length} mock posts from ${channelUsername}`);
+    return mockPosts.slice(0, limit);
   } catch (error) {
     logger.error(`Failed to fetch posts from ${channelUsername}: ${error.message}`);
-    throw error;
+    return [];
   }
 }
 
 /**
- * Получает определённое количество постов для обработки
+ * Получает случайный пост для обработки
  * @param {string} channelUsername - Username канала
  * @returns {Promise<object>} - Случайный пост
  */
@@ -101,28 +77,21 @@ export async function getRandomPost(channelUsername) {
     }
 
     const randomPost = posts[Math.floor(Math.random() * posts.length)];
-    logger.info(`Selected post from ${randomPost.date}`);
+    logger.info(`Selected mock post`);
 
     return randomPost;
   } catch (error) {
     logger.error(`Failed to get random post: ${error.message}`);
-    throw error;
+    return null;
   }
 }
 
 /**
- * Отключает Telegram Client
+ * Отключает parser (заглушка)
  * @returns {Promise<void>}
  */
 export async function disconnectParser() {
-  try {
-    if (client && client.connected) {
-      await client.disconnect();
-      logger.info('✓ Parser disconnected');
-    }
-  } catch (error) {
-    logger.error(`Failed to disconnect parser: ${error.message}`);
-  }
+  logger.info('✓ Parser disconnected');
 }
 
 export default {

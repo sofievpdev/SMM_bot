@@ -2,7 +2,6 @@ import { config } from './config/config.js';
 import { logger } from './utils/logger.js';
 import { initSchedule, publishNow, stopSchedule } from './handlers/schedule.js';
 import { disconnectPublisher } from './services/publisher.js';
-import { disconnectParser } from './services/telegram-parser.js';
 
 // Проверка переменных окружения
 function validateConfig() {
@@ -67,7 +66,6 @@ async function shutdown() {
 
   try {
     await disconnectPublisher();
-    await disconnectParser();
   } catch (error) {
     logger.warn(`Cleanup warning: ${error.message}`);
   }

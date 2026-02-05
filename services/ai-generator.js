@@ -17,7 +17,7 @@ export async function generateContent(sourceText, systemPrompt) {
     logger.info(`Generating content with system prompt: ${systemPrompt.substring(0, 50)}...`);
 
     const message = await client.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-opus-4-1',
       max_tokens: 500,
       messages: [
         {
@@ -49,7 +49,7 @@ export async function generateFromIdea(idea, systemPrompt) {
     logger.info(`Generating content from idea: ${idea.substring(0, 50)}...`);
 
     const message = await client.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-opus-4-1',
       max_tokens: 500,
       messages: [
         {

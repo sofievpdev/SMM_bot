@@ -10,11 +10,11 @@
     "setup": "node setup.js"
   },
   "dependencies": {
-    "gramjs": "^2.20.0",
     "dotenv": "^16.4.5",
     "@anthropic-ai/sdk": "^0.24.3",
     "node-cron": "^3.0.3",
-    "axios": "^1.7.2"
+    "axios": "^1.7.2",
+    "telegraf": "^4.15.0"
   },
   "devDependencies": {},
   "engines": {
