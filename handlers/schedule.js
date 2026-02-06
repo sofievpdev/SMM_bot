@@ -139,13 +139,23 @@ function getRandomIdea(channelType) {
 
 /**
  * Бустит метрики поста
+ *
+ * ⚠️ ВАЖНО: Для работы бустинга нужно узнать service_id для Telegram views
+ * Получить service_id можно:
+ * 1. Через вызов getServices() и поиск услуги "Telegram Post Views"
+ * 2. Или напрямую через панель SMM.media
+ * Затем установить переменную SMM_MEDIA_SERVICE_ID в .env файл
  */
 async function boostPostMetrics(channel, messageId) {
   try {
     const postUrl = `https://t.me/${channel.replace('@', '')}/${messageId}`;
     logger.info(`Boosting metrics for: ${postUrl}`);
 
-    const result = await boostMetrics(postUrl, 'tg_post_views', 100);
+    // Используем service_id из переменной окружения
+    // По умолчанию используем значение из SMM_MEDIA_SERVICE_ID в .env
+    const serviceId = process.env.SMM_MEDIA_SERVICE_ID || 'tg_post_views';
+
+    const result = await boostMetrics(postUrl, serviceId, 100);
 
     if (result.success) {
       logger.info(`✓ Boost order created: ${result.orderId}`);

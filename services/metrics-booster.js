@@ -2,7 +2,7 @@ import axios from 'axios';
 import { config } from '../config/config.js';
 import { logger } from '../utils/logger.js';
 
-const API_BASE = 'https://api.smm.media/api';
+const API_BASE = 'https://smm.media/api/reseller';
 
 /**
  * Получает список доступных сервисов для повышения метрик
@@ -12,10 +12,8 @@ export async function getServices() {
   try {
     logger.info('Fetching SMM.media services...');
 
-    const response = await axios.get(`${API_BASE}/services`, {
-      params: {
-        key: config.smmMediaKey,
-      },
+    const response = await axios.post(`${API_BASE}/services`, {
+      api_token: config.smmMediaKey,
     });
 
     const telegramServices = response.data.filter(
@@ -44,23 +42,23 @@ export async function boostMetrics(postUrl, serviceType = 'tg_post_views', quant
   try {
     logger.info(`Boosting metrics: ${serviceType}, quantity: ${quantity}`);
 
-    const response = await axios.post(`${API_BASE}/order`, {
-      key: config.smmMediaKey,
-      service: serviceType,
+    const response = await axios.post(`${API_BASE}/create_order`, {
+      api_token: config.smmMediaKey,
+      service_id: serviceType,
       link: postUrl,
-      quantity: quantity,
+      count: quantity,
     });
 
-    if (response.data.status === 'success') {
+    if (response.data.order_id) {
       logger.info(`✓ Boost order created: ${response.data.order_id}`);
       return {
         success: true,
         orderId: response.data.order_id,
-        charge: response.data.charge,
+        status: response.data.status,
       };
     } else {
-      logger.warn(`Boost failed: ${response.data.error}`);
-      return { success: false, error: response.data.error };
+      logger.warn(`Boost failed: ${response.data.error || 'Unknown error'}`);
+      return { success: false, error: response.data.error || 'Unknown error' };
     }
   } catch (error) {
     logger.error(`Failed to boost metrics: ${error.message}`);
@@ -77,11 +75,9 @@ export async function getOrderStatus(orderId) {
   try {
     logger.info(`Checking order status: ${orderId}`);
 
-    const response = await axios.get(`${API_BASE}/order/status`, {
-      params: {
-        key: config.smmMediaKey,
-        order_id: orderId,
-      },
+    const response = await axios.post(`${API_BASE}/order/status`, {
+      api_token: config.smmMediaKey,
+      order_id: orderId,
     });
 
     logger.info(`Order ${orderId} status: ${response.data.status}`);
@@ -98,10 +94,8 @@ export async function getOrderStatus(orderId) {
  */
 export async function getBalance() {
   try {
-    const response = await axios.get(`${API_BASE}/balance`, {
-      params: {
-        key: config.smmMediaKey,
-      },
+    const response = await axios.post(`${API_BASE}/balance`, {
+      api_token: config.smmMediaKey,
     });
 
     const balance = response.data.balance || 0;
