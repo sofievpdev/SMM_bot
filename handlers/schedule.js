@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import { logger } from '../utils/logger.js';
 import { generateContent, generateFromIdea, generateFromWebContent } from '../services/ai-generator.js';
 import { publishToMultiple } from '../services/publisher.js';
-import { boostMetrics } from '../services/metrics-booster.js';
+import { boostReactions } from '../services/metrics-booster.js';
 import { config, channels } from '../config/config.js';
 import { scrapeDailyContent } from '../services/web-scraper.js';
 import { translateArticles } from '../services/translator.js';
@@ -282,30 +282,27 @@ function getRandomIdea(channelType) {
 }
 
 /**
- * Бустит метрики поста
+ * Добавляет 20 позитивных реакций (👍) к посту через SMM.media API
  *
- * ⚠️ ВАЖНО: Для работы бустинга нужно узнать service_id для Telegram views
- * Получить service_id можно:
- * 1. Через вызов getServices() и поиск услуги "Telegram Post Views"
- * 2. Или напрямую через панель SMM.media
- * Затем установить переменную SMM_MEDIA_SERVICE_ID в .env файл
+ * ⚠️ ВАЖНО: Для работы нужны переменные окружения:
+ * - SMM_MEDIA_API_KEY - ключ API для SMM.media
+ * - Реакции будут добавлены к посту автоматически
  */
 async function boostPostMetrics(channel, messageId) {
   try {
     const postUrl = `https://t.me/${channel.replace('@', '')}/${messageId}`;
-    logger.info(`💪 Boosting metrics for: ${postUrl}`);
+    logger.info(`💚 Adding 20 positive reactions to: ${postUrl}`);
 
-    // Используем service_id из переменной окружения
-    // По умолчанию используем значение из SMM_MEDIA_SERVICE_ID в .env
-    const serviceId = process.env.SMM_MEDIA_SERVICE_ID || 'tg_post_views';
-
-    const result = await boostMetrics(postUrl, serviceId, 100);
+    // Добавляем 20 позитивных реакций (👍) через SMM.media API
+    const result = await boostReactions(postUrl, 20);
 
     if (result.success) {
-      logger.info(`✓ Boost order created: ${result.orderId}`);
+      logger.info(`✓ Reactions boost order created: ${result.orderId}`);
+    } else {
+      logger.warn(`⚠️ Could not add reactions: ${result.error}`);
     }
   } catch (error) {
-    logger.warn(`Could not boost metrics: ${error.message}`);
+    logger.warn(`Could not boost reactions: ${error.message}`);
   }
 }
 
