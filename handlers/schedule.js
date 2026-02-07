@@ -6,6 +6,7 @@ import { boostReactions } from '../services/metrics-booster.js';
 import { config, channels } from '../config/config.js';
 import { scrapeDailyContent } from '../services/web-scraper.js';
 import { translateArticles } from '../services/translator.js';
+import { findImageForPost, getImageAttribution } from '../services/image-search.js';
 
 let jobs = [];
 
@@ -207,7 +208,21 @@ export async function runPublishCycle() {
         try {
           logger.info(`Publishing post ${i + 1}/${postsToPublish.length}...`);
 
-          const publishResult = await publishToMultiple([channel.name], post);
+          // Ищем релевантную картинку
+          let imageUrl = null;
+          try {
+            const image = await findImageForPost(dayPlan.theme, post.substring(0, 100));
+            if (image) {
+              imageUrl = image.url;
+              logger.info(`✓ Found image: ${image.description}`);
+            }
+          } catch (imageError) {
+            logger.warn(`Could not find image: ${imageError.message}`);
+            // Продолжаем публикацию без картинки если не смогли найти
+          }
+
+          // Публикуем пост (с картинкой если удалось найти)
+          const publishResult = await publishToMultiple([channel.name], post, imageUrl);
 
           if (publishResult && publishResult[0]?.messageId) {
             logger.info(`✓ Post published: ${channel.name}/${publishResult[0].messageId}`);

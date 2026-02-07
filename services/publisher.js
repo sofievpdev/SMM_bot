@@ -56,16 +56,56 @@ export async function publishMessage(channelUsername, message) {
 }
 
 /**
+ * Публикует фото с подписью в канал
+ * @param {string} channelUsername - Username канала (например: @sofismm22)
+ * @param {string} imageUrl - URL картинки
+ * @param {string} caption - Подпись (текст поста)
+ * @returns {Promise<object>} - Результат публикации
+ */
+export async function publishPhoto(channelUsername, imageUrl, caption) {
+  try {
+    logger.info(`Publishing photo to ${channelUsername}...`);
+
+    const response = await axios.post(`${TELEGRAM_API}/sendPhoto`, {
+      chat_id: channelUsername,
+      photo: imageUrl,
+      caption: caption,
+      parse_mode: 'HTML',
+    });
+
+    if (response.data.ok) {
+      const messageId = response.data.result.message_id;
+      logger.info(`✓ Photo published to ${channelUsername} (ID: ${messageId})`);
+      return { success: true, messageId, channel: channelUsername };
+    } else {
+      throw new Error(response.data.description || 'Unknown error');
+    }
+  } catch (error) {
+    logger.error(`Failed to publish photo to ${channelUsername}: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
  * Публикует сообщение в несколько каналов параллельно
  * @param {string[]} channels - Массив username каналов
  * @param {string} message - Текст сообщения
+ * @param {string} imageUrl - (опционально) URL картинки для публикации с фото
  * @returns {Promise<object[]>} - Массив результатов
  */
-export async function publishToMultiple(channels, message) {
+export async function publishToMultiple(channels, message, imageUrl = null) {
   try {
-    logger.info(`Publishing to ${channels.length} channels...`);
+    logger.info(`Publishing to ${channels.length} channels${imageUrl ? ' with image' : ''}...`);
 
-    const promises = channels.map((channel) => publishMessage(channel, message));
+    let promises;
+    if (imageUrl) {
+      // Публикуем с фото
+      promises = channels.map((channel) => publishPhoto(channel, imageUrl, message));
+    } else {
+      // Публикуем обычное текстовое сообщение
+      promises = channels.map((channel) => publishMessage(channel, message));
+    }
+
     const results = await Promise.all(promises);
 
     logger.info(`✓ Published to ${channels.length} channels`);
@@ -87,6 +127,7 @@ export async function disconnectPublisher() {
 export default {
   initPublisher,
   publishMessage,
+  publishPhoto,
   publishToMultiple,
   disconnectPublisher,
 };
