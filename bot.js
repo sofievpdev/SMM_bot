@@ -32,10 +32,10 @@ async function initBot() {
     validateConfig();
 
     logger.info(`Environment: ${config.isDev ? 'development' : 'production'}`);
-    logger.info(`Publish time: ${config.publishTime} (Cyprus TZ)\n`);
+    logger.info(`Publish times: ${config.publishTimes.join(', ')} (Cyprus TZ)\n`);
 
-    // Инициализируем расписание
-    initSchedule(config.publishTime);
+    // Инициализируем расписание (читает publishTimes из config)
+    initSchedule();
 
     logger.success('✓ Bot initialized successfully\n');
     logger.info('Commands:');
