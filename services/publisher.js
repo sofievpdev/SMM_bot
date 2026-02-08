@@ -64,24 +64,38 @@ export async function publishMessage(channelUsername, message) {
  */
 export async function publishPhoto(channelUsername, imageUrl, caption) {
   try {
-    logger.info(`Publishing photo to ${channelUsername}...`);
+    logger.info(`📸 Publishing photo to ${channelUsername}...`);
+    logger.info(`   Image URL: ${imageUrl.substring(0, 80)}...`);
+    logger.info(`   Caption length: ${caption.length} chars`);
 
-    const response = await axios.post(`${TELEGRAM_API}/sendPhoto`, {
+    const payload = {
       chat_id: channelUsername,
       photo: imageUrl,
       caption: caption,
       parse_mode: 'HTML',
-    });
+    };
+
+    logger.info(`📤 Sending to Telegram API: /sendPhoto`);
+    const response = await axios.post(`${TELEGRAM_API}/sendPhoto`, payload);
+    logger.info(`📥 Response: ${JSON.stringify(response.data).substring(0, 200)}`);
 
     if (response.data.ok) {
       const messageId = response.data.result.message_id;
-      logger.info(`✓ Photo published to ${channelUsername} (ID: ${messageId})`);
+      logger.success(`✓ Photo published to ${channelUsername} (ID: ${messageId})`);
       return { success: true, messageId, channel: channelUsername };
     } else {
-      throw new Error(response.data.description || 'Unknown error');
+      const errorMsg = response.data.description || 'Unknown error';
+      logger.error(`❌ Telegram API error: ${errorMsg}`);
+      throw new Error(errorMsg);
     }
   } catch (error) {
-    logger.error(`Failed to publish photo to ${channelUsername}: ${error.message}`);
+    logger.error(`❌ Failed to publish photo to ${channelUsername}: ${error.message}`);
+
+    if (error.response) {
+      logger.error(`   HTTP Status: ${error.response.status}`);
+      logger.error(`   Response: ${JSON.stringify(error.response.data)}`);
+    }
+
     throw error;
   }
 }
@@ -95,23 +109,35 @@ export async function publishPhoto(channelUsername, imageUrl, caption) {
  */
 export async function publishToMultiple(channels, message, imageUrl = null) {
   try {
-    logger.info(`Publishing to ${channels.length} channels${imageUrl ? ' with image' : ''}...`);
+    logger.info(`\n📢 Publishing to ${channels.length} channel(s)${imageUrl ? ' WITH IMAGE 📸' : ' (text only)'}`);
+    logger.info(`   Channels: ${channels.join(', ')}`);
+    logger.info(`   Message length: ${message.length} chars`);
+
+    if (imageUrl) {
+      logger.info(`   Image URL provided: ${imageUrl.substring(0, 60)}...`);
+    } else {
+      logger.warn(`   ⚠️ No image URL provided - publishing text only`);
+    }
 
     let promises;
     if (imageUrl) {
       // Публикуем с фото
+      logger.info(`✨ Using sendPhoto endpoint`);
       promises = channels.map((channel) => publishPhoto(channel, imageUrl, message));
     } else {
       // Публикуем обычное текстовое сообщение
+      logger.info(`📝 Using sendMessage endpoint`);
       promises = channels.map((channel) => publishMessage(channel, message));
     }
 
     const results = await Promise.all(promises);
 
-    logger.info(`✓ Published to ${channels.length} channels`);
+    const successCount = results.filter(r => r.success).length;
+    logger.success(`✓ Successfully published to ${successCount}/${channels.length} channels`);
+
     return results;
   } catch (error) {
-    logger.error(`Failed to publish to multiple channels: ${error.message}`);
+    logger.error(`❌ Failed to publish to multiple channels: ${error.message}`);
     throw error;
   }
 }

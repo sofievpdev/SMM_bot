@@ -212,13 +212,17 @@ export async function runPublishCycle() {
           // Ищем релевантную картинку
           let imageUrl = null;
           try {
+            logger.info(`🔍 Searching for image (theme: ${dayPlan.theme})...`);
             const image = await findImageForPost(dayPlan.theme, post.substring(0, 100));
             if (image) {
               imageUrl = image.url;
-              logger.info(`✓ Found image: ${image.description}`);
+              logger.success(`✓ Found image: ${image.description}`);
+              logger.info(`   📸 URL: ${imageUrl.substring(0, 80)}...`);
+            } else {
+              logger.warn(`⚠️ No image found for theme: ${dayPlan.theme}`);
             }
           } catch (imageError) {
-            logger.warn(`Could not find image: ${imageError.message}`);
+            logger.error(`❌ Image search error: ${imageError.message}`);
             // Продолжаем публикацию без картинки если не смогли найти
           }
 
