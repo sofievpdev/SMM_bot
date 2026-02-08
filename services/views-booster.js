@@ -29,17 +29,28 @@ export async function boostViews(postUrl, quantity = 300) {
     }
 
     // Service ID 821 = Мир | Живые просмотры
-    const response = await axios.post(`${API_BASE}/create_order`, {
+    const payload = {
       api_token: apiToken,
       service_id: 821, // Живые просмотры
       link: postUrl,
       count: quantity,
-    });
+    };
+
+    logger.info(`📤 Отправляю в SMM.media API:`);
+    logger.info(`   URL: ${API_BASE}/create_order`);
+    logger.info(`   Service ID: 821`);
+    logger.info(`   Post Link: ${postUrl}`);
+    logger.info(`   Count: ${quantity}`);
+
+    const response = await axios.post(`${API_BASE}/create_order`, payload);
+
+    logger.info(`📥 Ответ от SMM.media: ${JSON.stringify(response.data)}`);
 
     if (response.data.order_id) {
       logger.success(`✅ Просмотры заказаны! Order #${response.data.order_id}`);
       logger.info(`   Просмотров добавлено: ${quantity}`);
       logger.info(`   Service: Мир | Живые просмотры`);
+      logger.info(`   Status: ${response.data.status}`);
 
       return {
         success: true,
@@ -48,18 +59,26 @@ export async function boostViews(postUrl, quantity = 300) {
         views: quantity,
         type: 'live-views'
       };
+    } else if (response.data.error) {
+      logger.error(`❌ Ошибка SMM.media: ${response.data.error}`);
+      return { success: false, error: response.data.error };
     } else {
-      const errorMsg = response.data.error || 'Unknown error';
-      logger.warn(`⚠️  Не удалось добавить просмотры: ${errorMsg}`);
-      return { success: false, error: errorMsg };
+      logger.warn(`⚠️ Неожиданный ответ: ${JSON.stringify(response.data)}`);
+      return { success: false, error: 'Unexpected response' };
     }
 
   } catch (error) {
-    logger.error(`Ошибка при добавлении просмотров: ${error.message}`);
+    logger.error(`❌ Ошибка при добавлении просмотров: ${error.message}`);
 
     if (error.response) {
-      logger.error(`Статус: ${error.response.status}`);
-      logger.error(`Ответ: ${JSON.stringify(error.response.data)}`);
+      logger.error(`HTTP Status: ${error.response.status}`);
+      logger.error(`Response: ${JSON.stringify(error.response.data)}`);
+
+      if (error.response.data?.error) {
+        logger.error(`SMM.media Error: ${error.response.data.error}`);
+      }
+    } else if (error.request) {
+      logger.error(`Нет ответа от сервера`);
     }
 
     return { success: false, error: error.message };
