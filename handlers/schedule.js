@@ -8,8 +8,44 @@ import { config, channels } from '../config/config.js';
 import { scrapeDailyContent } from '../services/web-scraper.js';
 import { translateArticles } from '../services/translator.js';
 import { findImageForPost, getImageAttribution } from '../services/image-search.js';
+import { selectTrendingTopic, buildTrendPrompt } from '../services/trend-research.js';
 
 let jobs = [];
+
+/**
+ * Обрезает текст для подписи к фото (max 1024 символа в Telegram)
+ * @param {string} text - Исходный текст
+ * @param {number} maxLength - Максимальная длина (по умолчанию 1024)
+ * @returns {string} - Обрезанный текст
+ */
+function trimForCaption(text, maxLength = 1024) {
+  if (!text || text.length <= maxLength) {
+    return text;
+  }
+
+  // Обрезаем до максимальной длины
+  let trimmed = text.substring(0, maxLength);
+
+  // Ищем последнюю полную пунктуацию
+  const lastPeriodIndex = Math.max(
+    trimmed.lastIndexOf('.'),
+    trimmed.lastIndexOf('!'),
+    trimmed.lastIndexOf('?')
+  );
+
+  if (lastPeriodIndex > maxLength * 0.7) {
+    // Если пунктуация достаточно близко к концу - обрезаем там
+    trimmed = trimmed.substring(0, lastPeriodIndex + 1);
+  } else {
+    // Иначе обрезаем на последнем пробеле
+    const lastSpaceIndex = trimmed.lastIndexOf(' ');
+    if (lastSpaceIndex > 0) {
+      trimmed = trimmed.substring(0, lastSpaceIndex) + '...';
+    }
+  }
+
+  return trimmed.trim();
+}
 
 /**
  * Инициализирует расписание публикаций на несколько раз в день
@@ -115,6 +151,39 @@ async function generateInspirationPost(channel) {
 }
 
 /**
+ * Генерирует пост на основе актуального тренда
+ * @param {object} channel - Конфигурация канала
+ * @param {string} dayTheme - Тема дня
+ * @returns {Promise<string|null>} - Сгенерированный контент или null
+ */
+async function generateTrendingPost(channel, dayTheme) {
+  try {
+    logger.info('📈 Checking for trending health topics...');
+
+    const trend = await selectTrendingTopic(dayTheme);
+
+    if (!trend) {
+      logger.info('No trending topic selected, using regular generation');
+      return null;
+    }
+
+    logger.info(`🔥 Found hot topic: "${trend.topic}"`);
+
+    const trendPrompt = buildTrendPrompt(trend, dayTheme);
+    const message = await generateFromIdea(trendPrompt, channel);
+
+    if (message) {
+      logger.success(`✓ Generated trending post about: ${trend.topic}`);
+    }
+
+    return message;
+  } catch (error) {
+    logger.error(`Failed to generate trending post: ${error.message}`);
+    return null;
+  }
+}
+
+/**
  * Запускает цикл публикации и бустинга
  * Основной рабочий процесс бота с web scraping, переводом и AI генерацией
  */
@@ -160,9 +229,48 @@ export async function runPublishCycle() {
         const inspPost2 = await generateInspirationPost(channel); // Два поста в воскресенье
         if (inspPost1) postsToPublish.push(inspPost1);
         if (inspPost2) postsToPublish.push(inspPost2);
+      } else if (dayOfWeek === 'wednesday') {
+        // СРЕДА: день трендов! Исследуем актуальные темы в longevity
+        logger.info('📈 Wednesday: Trend research day! Looking for hot topics...');
+
+        // Первый пост - из трендов
+        const trendPost = await generateTrendingPost(channel, dayPlan.theme);
+        if (trendPost) {
+          postsToPublish.push(trendPost);
+          logger.success('✓ Trending post generated!');
+        }
+
+        // Второй пост - из обычных источников
+        logger.info('🌐 Scraping content for second post...');
+        const articles = await scrapeDailyContent(dayOfWeek);
+        if (articles && articles.length > 0) {
+          const translatedArticles = await translateArticles(articles);
+          if (translatedArticles.length > 0) {
+            const post = await generateFromWebContent(translatedArticles[0], channel, dayPlan.theme);
+            if (post) postsToPublish.push(post);
+          }
+        }
+
+        // Если не получилось - fallback
+        if (postsToPublish.length < 2) {
+          const fallbackPost = await generateInspirationPost(channel);
+          if (fallbackPost) postsToPublish.push(fallbackPost);
+        }
       } else {
         // ДЛЯ ОСТАЛЬНЫХ ДНЕЙ: web scraping → translation → generation
+        // + 30% шанс поста из актуальных трендов
         logger.info(`🌐 Scraping content for theme: ${dayPlan.theme}...`);
+
+        // Проверяем тренды (30% шанс добавить пост из трендов)
+        const shouldCheckTrends = Math.random() < 0.3;
+        if (shouldCheckTrends) {
+          logger.info('🎲 Checking for trending topics (random 30% trigger)...');
+          const trendPost = await generateTrendingPost(channel, dayPlan.theme);
+          if (trendPost) {
+            postsToPublish.push(trendPost);
+            logger.success('✓ Added trending topic post!');
+          }
+        }
 
         // 1. Парсим статьи
         let articles = await scrapeDailyContent(dayOfWeek);
@@ -180,10 +288,10 @@ export async function runPublishCycle() {
           const translatedArticles = await translateArticles(articles);
           logger.info(`✓ Translated ${translatedArticles.length} articles`);
 
-          // 3. Генерируем посты из статей
-          logger.info('✨ Generating posts from articles...');
-          for (const article of translatedArticles.slice(0, 2)) {
-            // Берём максимум 2 статьи
+          // 3. Генерируем посты из статей (учитываем уже добавленные из трендов)
+          const postsNeeded = 2 - postsToPublish.length;
+          logger.info(`✨ Generating ${postsNeeded} post(s) from articles...`);
+          for (const article of translatedArticles.slice(0, postsNeeded)) {
             try {
               const post = await generateFromWebContent(article, channel, dayPlan.theme);
               if (post) {
@@ -227,7 +335,14 @@ export async function runPublishCycle() {
           }
 
           // Публикуем пост (с картинкой если удалось найти)
-          const publishResult = await publishToMultiple([channel.name], post, imageUrl);
+          // Telegram ограничивает подписи к фото 1024 символами
+          let postText = post;
+          if (imageUrl && post.length > 1024) {
+            logger.info(`⚠️ Post too long for caption (${post.length} chars), trimming to 1024...`);
+            postText = trimForCaption(post, 1024);
+            logger.info(`✓ Trimmed to ${postText.length} chars`);
+          }
+          const publishResult = await publishToMultiple([channel.name], postText, imageUrl);
 
           if (publishResult && publishResult[0]?.messageId) {
             logger.info(`✓ Post published: ${channel.name}/${publishResult[0].messageId}`);
