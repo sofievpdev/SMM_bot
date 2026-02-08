@@ -137,13 +137,14 @@ export async function boostReactions(postUrl, quantity = 20) {
       return { success: false, error: 'API key not configured' };
     }
 
-    logger.info(`Sending request to SMM.media with service: tg_post_reactions`);
+    logger.info(`Sending request to SMM.media with service #4057: Positive reactions mix 👍🤩🎉🔥❤️`);
 
     // Создаём заказ через SMM.media API для добавления reactions
-    // Service ID 240 = "Реакции 👍" (Reactions with thumbs up for regular posts)
+    // Service ID 4057 = "Реакции 👍🤩🎉🔥❤️" (Positive mix reactions only!)
+    // ONLY POSITIVE REACTIONS - NEVER NEGATIVE!
     const response = await axios.post(`${API_BASE}/create_order`, {
       api_token: apiToken,
-      service_id: 240, // Service ID для реакций 👍
+      service_id: 4057, // Service ID для позитивных реакций (микс 👍🤩🎉🔥❤️)
       link: postUrl,
       count: quantity,
     });
