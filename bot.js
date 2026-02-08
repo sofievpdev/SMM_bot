@@ -2,6 +2,7 @@ import { config } from './config/config.js';
 import { logger } from './utils/logger.js';
 import { initSchedule, publishNow, stopSchedule } from './handlers/schedule.js';
 import { disconnectPublisher } from './services/publisher.js';
+import { startLogsServer } from './services/logs-server.js';
 
 // Проверка переменных окружения
 function validateConfig() {
@@ -33,6 +34,9 @@ async function initBot() {
 
     logger.info(`Environment: ${config.isDev ? 'development' : 'production'}`);
     logger.info(`Publish times: ${config.publishTimes.join(', ')} (Cyprus TZ)\n`);
+
+    // Запускаем веб-сервер для логов (PORT 3000)
+    startLogsServer(3000);
 
     // Инициализируем расписание (читает publishTimes из config)
     initSchedule();

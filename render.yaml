@@ -1,10 +1,12 @@
 services:
-  - type: cron
+  - type: web
     name: smm-bot
     env: node
     plan: free
+    runtime: node
     buildCommand: npm install
     startCommand: npm start
+    autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
@@ -14,11 +16,13 @@ services:
         sync: false
       - key: SMM_MEDIA_API_KEY
         sync: false
+      - key: UNSPLASH_ACCESS_KEY
+        sync: false
       - key: TELEGRAM_API_ID
         sync: false
       - key: TELEGRAM_API_HASH
         sync: false
       - key: TELEGRAM_PHONE
         sync: false
-      - key: PUBLISH_TIME
-        value: "23:15"
+      - key: PUBLISH_TIMES
+        value: '["08:00","19:00"]'
