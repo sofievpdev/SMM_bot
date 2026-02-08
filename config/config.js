@@ -95,7 +95,7 @@ export const channels = {
       ],
       writingGuidelines: {
         tone: 'профессиональный, как опытный специалист',
-        length: { min: 800, max: 950 },  // Полноценные статьи, вписываются в лимит Telegram для фото (1024)
+        length: { min: 700, max: 850 },  // Полноценные статьи, гарантированно не обрежутся в Telegram (лимит 1024)
         useEmoji: true,  // Использовать эмодзи со вкусом (не перебор)
         includeCTA: true,
         professionalism: true,
