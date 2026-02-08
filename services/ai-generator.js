@@ -198,6 +198,46 @@ export function buildFullSystemPrompt(channel) {
 }
 
 /**
+ * Сокращает пост до указанной длины с сохранением смысла
+ * @param {string} text - Длинный текст
+ * @param {number} maxLength - Максимальная длина
+ * @returns {Promise<string>} - Сокращенный текст
+ */
+async function shortenPost(text, maxLength = 850) {
+  try {
+    logger.warn(`⚠️ Post is ${text.length} chars, shortening to ${maxLength}...`);
+
+    const message = await client.messages.create({
+      model: 'claude-opus-4-1',
+      max_tokens: 1500,
+      messages: [
+        {
+          role: 'user',
+          content: `СРОЧНО! Сократи этот пост РОВНО до ${maxLength} символов, сохранив ВСЁ важное:
+
+ТРЕБОВАНИЯ:
+- Длина РОВНО ${maxLength} символов (не больше!)
+- Сохрани ВСЮ суть, основные мысли, CTA и хештеги
+- Убери только второстепенные детали
+- Сохрани структуру и эмодзи
+- НЕ обрезай посередине - законченный текст!
+
+ИСХОДНЫЙ ТЕКСТ (${text.length} символов):
+${text}`
+        }
+      ]
+    });
+
+    const shortened = message.content[0].type === 'text' ? message.content[0].text : text;
+    logger.info(`✓ Shortened from ${text.length} to ${shortened.length} chars`);
+    return shortened;
+  } catch (error) {
+    logger.error(`Failed to shorten post: ${error.message}`);
+    return text.substring(0, maxLength); // Fallback: обрезаем
+  }
+}
+
+/**
  * Генерирует контент через Claude AI
  * @param {string} sourceText - Исходный текст для трансформации
  * @param {string|object} systemPromptOrChannel - System prompt строка или объект канала
@@ -241,6 +281,11 @@ ${sourceText}`,
     });
 
     let generatedText = message.content[0].type === 'text' ? message.content[0].text : '';
+
+    // Если больше 850 символов - сокращаем автоматически
+    if (generatedText.length > 850) {
+      generatedText = await shortenPost(generatedText, 850);
+    }
 
     // Обрезаем текст на полном слове
     generatedText = trimTextAtWordBoundary(generatedText, 4096);
@@ -297,6 +342,11 @@ ${idea}`,
     });
 
     let generatedText = message.content[0].type === 'text' ? message.content[0].text : '';
+
+    // Если больше 850 символов - сокращаем автоматически
+    if (generatedText.length > 850) {
+      generatedText = await shortenPost(generatedText, 850);
+    }
 
     // Обрезаем текст на полном слове
     generatedText = trimTextAtWordBoundary(generatedText, 4096);
@@ -437,6 +487,11 @@ ${article.preview || article.content || 'Нет доступного текст�
     });
 
     let generatedText = message.content[0].type === 'text' ? message.content[0].text : '';
+
+    // Если больше 850 символов - сокращаем автоматически
+    if (generatedText.length > 850) {
+      generatedText = await shortenPost(generatedText, 850);
+    }
 
     // Обрезаем текст на полном слове (максимум 4096 для Telegram)
     generatedText = trimTextAtWordBoundary(generatedText, 4096);
