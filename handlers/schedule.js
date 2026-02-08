@@ -3,6 +3,7 @@ import { logger } from '../utils/logger.js';
 import { generateContent, generateFromIdea, generateFromWebContent } from '../services/ai-generator.js';
 import { publishToMultiple } from '../services/publisher.js';
 import { boostReactions } from '../services/metrics-booster.js';
+import { boostViews } from '../services/views-booster.js';
 import { config, channels } from '../config/config.js';
 import { scrapeDailyContent } from '../services/web-scraper.js';
 import { translateArticles } from '../services/translator.js';
@@ -297,27 +298,40 @@ function getRandomIdea(channelType) {
 }
 
 /**
- * Добавляет 20 позитивных реакций (👍) к посту через SMM.media API
+ * Добавляет метрики к посту через SMM.media API
+ * - 20 позитивных реакций (service #4057)
+ * - 300 просмотров (service #821)
  *
  * ⚠️ ВАЖНО: Для работы нужны переменные окружения:
  * - SMM_MEDIA_API_KEY - ключ API для SMM.media
- * - Реакции будут добавлены к посту автоматически
  */
 async function boostPostMetrics(channel, messageId) {
   try {
     const postUrl = `https://t.me/${channel.replace('@', '')}/${messageId}`;
+    logger.info(`\n📊 Boosting post metrics...`);
+
+    // 1. Добавляем 20 позитивных реакций (👍🤩🎉🔥❤️) через SMM.media API (service #4057)
     logger.info(`💚 Adding 20 positive reactions to: ${postUrl}`);
+    const reactionsResult = await boostReactions(postUrl, 20);
 
-    // Добавляем 20 позитивных реакций (👍) через SMM.media API
-    const result = await boostReactions(postUrl, 20);
-
-    if (result.success) {
-      logger.info(`✓ Reactions boost order created: ${result.orderId}`);
+    if (reactionsResult.success) {
+      logger.success(`✓ Reactions boost order created: #${reactionsResult.orderId}`);
     } else {
-      logger.warn(`⚠️ Could not add reactions: ${result.error}`);
+      logger.warn(`⚠️ Could not add reactions: ${reactionsResult.error}`);
     }
+
+    // 2. Добавляем 300+ просмотров (service #821)
+    logger.info(`👀 Adding 300 live views to: ${postUrl}`);
+    const viewsResult = await boostViews(postUrl, 300);
+
+    if (viewsResult.success) {
+      logger.success(`✓ Views boost order created: #${viewsResult.orderId}`);
+    } else {
+      logger.warn(`⚠️ Could not add views: ${viewsResult.error}`);
+    }
+
   } catch (error) {
-    logger.warn(`Could not boost reactions: ${error.message}`);
+    logger.warn(`Could not boost post metrics: ${error.message}`);
   }
 }
 

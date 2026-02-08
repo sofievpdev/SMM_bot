@@ -82,21 +82,11 @@ export function getImageSearchQuery(dayTheme) {
  */
 export async function findImageForPost(dayTheme, postTitle = '') {
   try {
-    let query = getImageSearchQuery(dayTheme);
+    // ВСЕГДА используем английские ключевые слова для Unsplash
+    // (Unsplash API работает только с английским языком)
+    const query = getImageSearchQuery(dayTheme);
 
-    // Если есть заголовок, попробуем улучшить поиск
-    if (postTitle && postTitle.length > 0) {
-      // Извлекаем ключевые слова из заголовка
-      const keywords = postTitle
-        .split(' ')
-        .filter(word => word.length > 4)
-        .slice(0, 3)
-        .join(' ');
-
-      if (keywords) {
-        query = keywords;
-      }
-    }
+    logger.info(`📸 Searching image with theme: ${dayTheme} (query: "${query}")`);
 
     const image = await searchUnsplashImage(query, 1);
     return image;
