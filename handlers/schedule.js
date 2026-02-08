@@ -362,17 +362,17 @@ export async function runPublishCycle() {
         try {
           logger.info(`Publishing post ${i + 1}/${postsToPublish.length}...`);
 
-          // Ищем релевантную картинку
+          // Ищем релевантную картинку на основе содержания поста
           let imageUrl = null;
           try {
-            logger.info(`🔍 Searching for image (theme: ${dayPlan.theme})...`);
-            const image = await findImageForPost(dayPlan.theme, post.substring(0, 100));
+            logger.info(`🔍 Searching for image based on post content...`);
+            const image = await findImageForPost(dayPlan.theme, post);
             if (image) {
               imageUrl = image.url;
               logger.success(`✓ Found image: ${image.description}`);
               logger.info(`   📸 URL: ${imageUrl.substring(0, 80)}...`);
             } else {
-              logger.warn(`⚠️ No image found for theme: ${dayPlan.theme}`);
+              logger.warn(`⚠️ No image found for post content`);
             }
           } catch (imageError) {
             logger.error(`❌ Image search error: ${imageError.message}`);

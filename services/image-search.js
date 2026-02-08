@@ -75,18 +75,88 @@ export function getImageSearchQuery(dayTheme) {
 }
 
 /**
- * Ищет картинку для поста на основе темы дня
- * @param {string} dayTheme - Тема дня
- * @param {string} postTitle - Заголовок поста (опционально для улучшения поиска)
+ * Извлекает ключевые слова из текста поста для поиска картинки
+ * @param {string} postText - Текст поста на русском
+ * @returns {string} - Английские ключевые слова для поиска
+ */
+export function extractKeywordsFromPost(postText) {
+  // Словарь для перевода ключевых слов RU → EN
+  const keywordTranslations = {
+    // Питание
+    'овсянка': 'oatmeal',
+    'овсяная каша': 'oatmeal breakfast',
+    'рецепт': 'healthy food recipe',
+    'завтрак': 'breakfast healthy',
+    'ягоды': 'berries',
+    'орехи': 'nuts',
+    'питание': 'nutrition healthy food',
+    'диета': 'healthy diet food',
+    'еда': 'healthy food',
+    'продукты': 'healthy food',
+    'овощи': 'vegetables',
+    'фрукты': 'fruits',
+
+    // Здоровье и медицина
+    'здоровье': 'health wellness',
+    'долголетие': 'longevity aging health',
+    'сон': 'sleep rest wellness',
+    'стресс': 'stress management wellness',
+    'воспаление': 'inflammation health',
+    'иммунитет': 'immunity health',
+    'микробиом': 'gut health microbiome',
+    'метаболизм': 'metabolism health',
+    'энергия': 'energy fitness health',
+    'профилактика': 'prevention health medical',
+    'исследование': 'research medical science',
+    'онкология': 'cancer prevention health',
+
+    // Фитнес
+    'похудение': 'weight loss fitness',
+    'фитнес': 'fitness exercise',
+    'тренировка': 'workout exercise fitness',
+    'упражнения': 'exercise fitness',
+    'йога': 'yoga wellness',
+    'медитация': 'meditation mindfulness',
+
+    // Wellness
+    'биохакинг': 'biohacking health optimization',
+    'самочувствие': 'wellness health',
+    'мотивация': 'motivation inspiration wellness',
+  };
+
+  const postLower = postText.toLowerCase();
+
+  // Ищем первое совпадение ключевого слова
+  for (const [ruWord, enTranslation] of Object.entries(keywordTranslations)) {
+    if (postLower.includes(ruWord)) {
+      logger.info(`🔑 Found keyword: "${ruWord}" → "${enTranslation}"`);
+      return enTranslation;
+    }
+  }
+
+  // Если не нашли ничего специфичного, используем общие слова
+  return 'health wellness lifestyle';
+}
+
+/**
+ * Ищет картинку для поста на основе содержания текста
+ * @param {string} dayTheme - Тема дня (резервный вариант)
+ * @param {string} postText - Текст поста для извлечения ключевых слов
  * @returns {Promise<object>} - Объект картинки
  */
-export async function findImageForPost(dayTheme, postTitle = '') {
+export async function findImageForPost(dayTheme, postText = '') {
   try {
-    // ВСЕГДА используем английские ключевые слова для Unsplash
-    // (Unsplash API работает только с английским языком)
-    const query = getImageSearchQuery(dayTheme);
+    let query;
 
-    logger.info(`📸 Searching image with theme: ${dayTheme} (query: "${query}")`);
+    // Если есть текст поста - извлекаем из него ключевые слова
+    if (postText && postText.length > 50) {
+      query = extractKeywordsFromPost(postText);
+      logger.info(`📸 Using keywords from post content: "${query}"`);
+    } else {
+      // Fallback: используем тему дня
+      query = getImageSearchQuery(dayTheme);
+      logger.info(`📸 Using day theme: ${dayTheme} (query: "${query}")`);
+    }
 
     const image = await searchUnsplashImage(query, 1);
     return image;
