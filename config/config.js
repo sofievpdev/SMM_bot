@@ -96,7 +96,7 @@ export const channels = {
       writingGuidelines: {
         tone: 'профессиональный, как опытный специалист',
         length: { min: 900, max: 1200 },  // Полноценные статьи (~1 минута чтения)
-        useEmoji: false,  // Профессиональный стиль без эмодзи
+        useEmoji: true,  // Использовать эмодзи со вкусом (не перебор)
         includeCTA: true,
         professionalism: true,
         balanceApproaches: true,  // Доказательная + функциональная медицина
