@@ -66,7 +66,7 @@ export function getImageSearchQuery(dayTheme) {
     nutrition: 'healthy food nutrition fruits vegetables',
     longevity: 'longevity aging research healthy lifestyle',
     wellness: 'wellness meditation yoga health',
-    case_study: 'health success transformation fitness',
+    case_study: 'doctor patient health consultation medical professional',
     weight_loss: 'weight loss fitness exercise health',
     qa_inspiration: 'health inspiration motivation wellness',
   };
