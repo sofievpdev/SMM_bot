@@ -7,6 +7,48 @@ const client = new Anthropic({
 });
 
 /**
+ * Обрезает текст на полном слове, не разрезая слово пополам
+ * Также убирает неполные предложения в конце
+ * @param {string} text - Исходный текст
+ * @param {number} maxLength - Максимальная длина (по умолчанию 4096 для Telegram)
+ * @returns {string} - Обрезанный текст
+ */
+function trimTextAtWordBoundary(text, maxLength = 4096) {
+  if (!text || text.length <= maxLength) {
+    return text;
+  }
+
+  // Обрезаем до максимальной длины
+  let trimmed = text.substring(0, maxLength);
+
+  // Ищем последний полный пробел перед обрезкой
+  const lastSpaceIndex = trimmed.lastIndexOf(' ');
+
+  if (lastSpaceIndex > maxLength * 0.8) {
+    // Если последний пробел близко к концу, используем его
+    trimmed = trimmed.substring(0, lastSpaceIndex);
+  } else {
+    // Если последний пробел далеко, просто обрезаем
+    trimmed = text.substring(0, maxLength);
+  }
+
+  // Убираем незаконченные предложения в конце
+  // Ищем последнюю точку, восклицательный или вопросительный знак
+  const lastPunctuationIndex = Math.max(
+    trimmed.lastIndexOf('.'),
+    trimmed.lastIndexOf('!'),
+    trimmed.lastIndexOf('?')
+  );
+
+  if (lastPunctuationIndex > trimmed.length * 0.7) {
+    // Если знак препинания близко к концу, обрезаем после него
+    trimmed = trimmed.substring(0, lastPunctuationIndex + 1);
+  }
+
+  return trimmed.trim();
+}
+
+/**
  * Строит полный системный промпт из расширенной конфигурации канала
  * Объединяет все секции: промпт, источники, стили, правила, структуру
  * @param {object} channel - Конфигурация канала с расширенными полями
@@ -123,7 +165,10 @@ export async function generateContent(sourceText, systemPromptOrChannel) {
       system: systemPrompt,
     });
 
-    const generatedText = message.content[0].type === 'text' ? message.content[0].text : '';
+    let generatedText = message.content[0].type === 'text' ? message.content[0].text : '';
+
+    // Обрезаем текст на полном слове
+    generatedText = trimTextAtWordBoundary(generatedText, 4096);
 
     logger.info('✓ Content generated successfully');
     return generatedText;
@@ -160,7 +205,10 @@ export async function generateFromIdea(idea, systemPromptOrChannel) {
       system: systemPrompt,
     });
 
-    const generatedText = message.content[0].type === 'text' ? message.content[0].text : '';
+    let generatedText = message.content[0].type === 'text' ? message.content[0].text : '';
+
+    // Обрезаем текст на полном слове
+    generatedText = trimTextAtWordBoundary(generatedText, 4096);
 
     logger.info('✓ Content generated from idea successfully');
     return generatedText;
@@ -289,7 +337,10 @@ ${article.preview || article.content || 'Нет доступного текст�
       system: systemPrompt,
     });
 
-    const generatedText = message.content[0].type === 'text' ? message.content[0].text : '';
+    let generatedText = message.content[0].type === 'text' ? message.content[0].text : '';
+
+    // Обрезаем текст на полном слове (максимум 4096 для Telegram)
+    generatedText = trimTextAtWordBoundary(generatedText, 4096);
 
     logger.info(`✓ Post generated (${generatedText.length} characters) for theme: ${dayTheme}`);
 
