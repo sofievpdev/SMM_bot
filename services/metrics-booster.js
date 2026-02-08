@@ -130,14 +130,22 @@ export async function boostReactions(postUrl, quantity = 20) {
     }
 
     const [_, channel, messageId] = urlMatch;
+    const apiToken = process.env.SMM_MEDIA_API_KEY || config.smmMediaKey;
+
+    if (!apiToken) {
+      logger.error('SMM_MEDIA_API_KEY is not configured');
+      return { success: false, error: 'API key not configured' };
+    }
+
+    logger.info(`Sending request to SMM.media with service: tg_post_reactions`);
 
     // Создаём заказ через SMM.media API для добавления reactions
+    // Service ID 240 = "Реакции 👍" (Reactions with thumbs up for regular posts)
     const response = await axios.post(`${API_BASE}/create_order`, {
-      api_token: process.env.SMM_MEDIA_API_KEY || config.smmMediaKey,
-      service_id: 'tg_post_reactions', // Service ID для reactions
+      api_token: apiToken,
+      service_id: 240, // Service ID для реакций 👍
       link: postUrl,
       count: quantity,
-      reaction: '👍', // Позитивная реакция - лайк
     });
 
     if (response.data.order_id) {
@@ -150,11 +158,19 @@ export async function boostReactions(postUrl, quantity = 20) {
       };
     } else {
       // Если SMM.media не поддерживает reactions, попробуем альтернативный способ
-      logger.warn(`SMM.media reactions service not available: ${response.data.error}`);
-      return { success: false, error: response.data.error };
+      const errorMsg = response.data.error || 'Unknown error';
+      logger.warn(`SMM.media reactions service error: ${errorMsg}`);
+      return { success: false, error: errorMsg };
     }
   } catch (error) {
     logger.error(`Failed to boost reactions: ${error.message}`);
+
+    // Логируем дополнительную информацию об ошибке
+    if (error.response) {
+      logger.error(`Response status: ${error.response.status}`);
+      logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
+    }
+
     return { success: false, error: error.message };
   }
 }
